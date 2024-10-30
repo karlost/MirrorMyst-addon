@@ -77,15 +77,17 @@ local function ExportAuctions()
             local ownedAuctions = C_AuctionHouse.GetOwnedAuctions()
             
             for _, auction in ipairs(ownedAuctions) do
-                local itemID = auction.itemKey.itemID
-                local quantity = auction.quantity
-                local buyoutAmount = auction.buyoutAmount
-                local timeLeft = auction.timeLeftSeconds
                 local status = auction.status -- 1 = active, 2 = sold
-                
-                -- Format the data as JSON
-                tinsert(list, string.format('{"item_id":"%d","quantity":"%d","buyout":"%d","time_left":"%d","status":"%d"}',
-                    itemID, quantity, buyoutAmount, timeLeft, status))
+                if status ~= 1 then
+                    local itemID = auction.itemKey.itemID
+                    local quantity = auction.quantity
+                    local buyoutAmount = auction.buyoutAmount
+                    local timeLeft = auction.timeLeftSeconds
+                    
+                    -- Format the data as JSON
+                    tinsert(list, string.format('{"item_id":"%d","quantity":"%d","buyout":"%d","time_left":"%d","status":"%d"}',
+                        itemID, quantity, buyoutAmount, timeLeft, status))
+                end
             end
             
             -- Join all entries with newlines
