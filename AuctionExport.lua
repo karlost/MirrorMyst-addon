@@ -81,10 +81,11 @@ local function ExportAuctions()
                 local quantity = auction.quantity
                 local buyoutAmount = auction.buyoutAmount
                 local timeLeft = auction.timeLeftSeconds
+                local status = auction.status -- 1 = active, 2 = sold
                 
                 -- Format the data as JSON
-                tinsert(list, string.format('{"item_id":"%d","quantity":"%d","buyout":"%d","time_left":"%d"}',
-                    itemID, quantity, buyoutAmount, timeLeft))
+                tinsert(list, string.format('{"item_id":"%d","quantity":"%d","buyout":"%d","time_left":"%d","status":"%d"}',
+                    itemID, quantity, buyoutAmount, timeLeft, status))
             end
             
             -- Join all entries with newlines
