@@ -90,8 +90,8 @@ local function ExportAuctions()
                 end
             end
             
-            -- Join all entries with newlines
-            local exportText = table.concat(list, ";\n")
+            -- Join all entries into a JSON array
+            local exportText = "[\n" .. table.concat(list, ",\n") .. "\n]"
             
             -- Display the results
             editBox:SetText(exportText)
