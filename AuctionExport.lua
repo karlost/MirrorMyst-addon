@@ -62,8 +62,11 @@ local function ExportAuctions()
         return
     end
 
-    -- Query owned auctions
-    C_AuctionHouse.QueryOwnedAuctions()
+    -- Query owned auctions with default sort (by time remaining)
+    local sorts = {
+        {sortOrder = 0, reverseSort = false}
+    }
+    C_AuctionHouse.QueryOwnedAuctions(sorts)
 
     -- Create a list to store auction data
     local list = {}
