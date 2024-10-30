@@ -223,12 +223,7 @@ local function runExport()
                     local itemID = itemInfo.itemID
                     local itemName = itemInfo.itemName or select(1, GetItemInfo(itemInfo.hyperlink))
                     local quantity = itemInfo.stackCount
-                    tinsert(list, '{"item_id":"')
-                    tinsert(list, itemID)
-                    tinsert(list, '","quantity":"')
-                    tinsert(list, quantity)
-                    tinsert(list, '"}')
-                    tinsert(list, ";\n")
+                    tinsert(list, string.format('{"item_id":"%s","quantity":"%s"}', itemID, quantity))
                 end
             end
         end
@@ -276,7 +271,7 @@ local function runExport()
         end
     end
  
-    editBox:SetText(table.concat(list))
+    editBox:SetText("[\n" .. table.concat(list, ",\n") .. "\n]")
     frame:Show()
     editBox:HighlightText()
     editBox:SetFocus(true)
