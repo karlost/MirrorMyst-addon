@@ -109,7 +109,11 @@ end
 -- Register slash command
 SLASH_AUCTIONEXPORT1 = "/auctionexport"
 SlashCmdList["AUCTIONEXPORT"] = function(msg)
-    ExportAuctions()
+    if AuctionHouseFrame and AuctionHouseFrame:IsVisible() then
+        ExportAuctions()
+    else
+        print("|cffff0000Error:|r Please open the Auction House first to export your auctions.")
+    end
 end
 
 -- Add login message
