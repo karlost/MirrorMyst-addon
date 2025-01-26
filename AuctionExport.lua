@@ -1,6 +1,23 @@
 -- Base64 encoding/decoding functions
 local b='ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/'
 
+-- Pomocná funkce pro kontrolu předmětu
+local function canExportItem(itemID)
+    -- Kontrola transmogrifikace
+    if not C_Transmog.CanTransmogItem(itemID) then
+        return false
+    end
+    
+    -- Kontrola vazby předmětu
+    local _, _, _, _, _, _, _, _, _, _, _, _, _, bindType = GetItemInfo(itemID)
+    -- bindType: 0 = není vázaný, 1 = váže při sebrání, 2 = váže při nasazení, 3 = váže na účet
+    if bindType == 1 then -- pouze předměty co nejsou BoP
+        return false
+    end
+    
+    return true
+end
+
 local function encode(data)
     return ((data:gsub('.', function(x) 
         local r,b='',x:byte()
@@ -111,13 +128,9 @@ local function ExportAuctions()
                 local status = auction.status -- 1 = active, 2 = sold
                 if status ~= 1 then
                     local itemID = auction.itemKey.itemID
-                    local quantity = auction.quantity
-                    local buyoutAmount = auction.buyoutAmount
-                    local timeLeft = auction.timeLeftSeconds
-                    
-                    -- Format the data as JSON
-                    tinsert(list, string.format('{"item_id":"%d","quantity":"%d","buyout":"%d","time_left":"%d","status":"%d"}',
-                        itemID, quantity, buyoutAmount, timeLeft, status))
+                    if canExportItem(itemID) then
+                        tinsert(list, string.format('{"item_id":"%d"}', itemID))
+                    end
                 end
             end
             

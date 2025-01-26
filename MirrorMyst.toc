@@ -1,8 +1,19 @@
-## Interface: 100205
-## Title: MirrorMyst MarketPlace
+## Interface: 110007
+## Title: MirrorMyst Exporter
 ## Notes: Export inventory items for MirrorMyst 
 ## Author: iChodec
 ## Version: 1.0
+## SavedVariables: MirrorMystDB
+## OptionalDeps: AceGUI-3.0-SharedMediaWidgets
+## X-Embeds: Ace3
 
-MirrorMyst.lua
+# Ace3 Libraries
+Libs\AceAddon-3.0\AceAddon-3.0.xml
+Libs\AceConsole-3.0\AceConsole-3.0.xml
+Libs\AceConfig-3.0\AceConfig-3.0.xml
+Libs\AceDB-3.0\AceDB-3.0.xml
+Libs\AceGUI-3.0\AceGUI-3.0.xml
+
+Options.lua
+MirrorMystExporter.lua
 AuctionExport.lua
