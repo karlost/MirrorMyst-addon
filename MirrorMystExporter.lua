@@ -9,26 +9,34 @@ end
 -- Získání TSM ceny pro předmět
 local function GetTSMPrice(itemID)
     if not IsTSMAvailable() then 
-        print("|cffff0000Debug:|r TSM API není dostupné")
+        if MirrorMyst.db.profile.debugMode then
+            print("|cffff0000Debug:|r TSM API is not available")
+        end
         return nil 
     end
     
     if not MirrorMyst.db or not MirrorMyst.db.profile or not MirrorMyst.db.profile.tsmPrices or not MirrorMyst.db.profile.tsmPrices.enabled then 
-        print("|cffff0000Debug:|r TSM ceny jsou vypnuté v nastavení")
+        if MirrorMyst.db.profile.debugMode then
+            print("|cffff0000Debug:|r TSM prices are disabled in settings")
+        end
         return nil 
     end
 
     -- Získání item linku pro konverzi na TSM itemString
     local itemLink = select(2, GetItemInfo(itemID))
     if not itemLink then
-        print(string.format("|cffff0000Debug:|r Nelze získat item link pro ID %d", itemID))
+        if MirrorMyst.db.profile.debugMode then
+            print(string.format("|cffff0000Debug:|r Cannot get item link for ID %d", itemID))
+        end
         return nil
     end
 
     -- Konverze na TSM itemString
     local itemString = TSM_API.ToItemString(itemLink)
     if not itemString then
-        print(string.format("|cffff0000Debug:|r Nelze konvertovat item link na TSM itemString pro ID %d", itemID))
+        if MirrorMyst.db.profile.debugMode then
+            print(string.format("|cffff0000Debug:|r Cannot convert item link to TSM itemString for ID %d", itemID))
+        end
         return nil
     end
     
@@ -36,9 +44,13 @@ local function GetTSMPrice(itemID)
     local price, errorMsg = TSM_API.GetCustomPriceValue(priceSource, itemString)
     
     if price then
-        print(string.format("|cffff0000Debug:|r Získána TSM cena pro item %d: %d (%s)", itemID, price, priceSource))
+        if MirrorMyst.db.profile.debugMode then
+            print(string.format("|cffff0000Debug:|r Got TSM price for item %d: %d (%s)", itemID, price, priceSource))
+        end
     else
-        print(string.format("|cffff0000Debug:|r TSM cena není dostupná pro item %d (%s): %s", itemID, priceSource, errorMsg or "neznámá chyba"))
+        if MirrorMyst.db.profile.debugMode then
+            print(string.format("|cffff0000Debug:|r TSM price is not available for item %d (%s): %s", itemID, priceSource, errorMsg or "unknown error"))
+        end
     end
     
     return price
@@ -48,6 +60,7 @@ function MirrorMyst:OnInitialize()
     -- Inicializace DB
     self.db = LibStub("AceDB-3.0"):New("MirrorMystDB", {
         profile = {
+            debugMode = false,
             bags = {
                 [0] = true, -- Backpack
                 [1] = true,
@@ -74,7 +87,7 @@ function MirrorMyst:OnInitialize()
 end
 
 function MirrorMyst:OnEnable()
-    self:Print("|cffff0000TMog-MarketPlace:|r Type |cffffff00/tmogmpexport|r to export to Transmog master or |cffffff00/mm|r for settings.")
+    self:Print("|cffff0000TMog-MarketPlace:|r Type |cffffff00/mmbexport|r bag/bank to export to MirrorMyst or |cffffff00/mm|r for settings.")
 end
 
 function MirrorMyst:GetBagSettings()
@@ -186,7 +199,7 @@ editBox:SetWidth(frame.scrollFrame:GetWidth())
 editBox:SetScript("OnEscapePressed", editBox.ClearFocus)
 
 
-SLASH_TMOGMPEXPORT1 = "/tmogmpexport"
+SLASH_TMOGMPEXPORT1 = "/mmbexport"
 
 function SlashCmdList.TMOGMPEXPORT(msg)
     local settings = MirrorMyst:GetBagSettings()
@@ -194,11 +207,15 @@ function SlashCmdList.TMOGMPEXPORT(msg)
     local totalItems = 0
     
     -- Export from bags
-    print("|cffff0000Debug:|r Začínám export z bagů...")
+    if MirrorMyst.db.profile.debugMode then
+        print("|cffff0000Debug:|r Starting export from bags...")
+    end
     for i = 0, 4 do
         if settings.bags[i] then
             local slot_in_bag = C_Container.GetContainerNumSlots(i)
-            print(string.format("|cffff0000Debug:|r Prohledávám bag %d (%d slotů)", i, slot_in_bag))
+            if MirrorMyst.db.profile.debugMode then
+                print(string.format("|cffff0000Debug:|r Scanning bag %d (%d slots)", i, slot_in_bag))
+            end
             for j = 1, slot_in_bag do
                 local itemInfo = C_Container.GetContainerItemInfo(i, j)
                 if itemInfo then
@@ -207,7 +224,9 @@ function SlashCmdList.TMOGMPEXPORT(msg)
                         local tsmPrice = GetTSMPrice(itemID)
                         if tsmPrice then
                             local jsonEntry = string.format('{"item_id":"%s","item_price":"%d"}', itemID, tsmPrice)
-                            print(string.format("|cffff0000Debug:|r Export JSON: %s", jsonEntry))
+                            if MirrorMyst.db.profile.debugMode then
+                                print(string.format("|cffff0000Debug:|r Export JSON: %s", jsonEntry))
+                            end
                             tinsert(list, jsonEntry)
                         else
                             local jsonEntry = string.format('{"item_id":"%s"}', itemID)
@@ -223,11 +242,15 @@ function SlashCmdList.TMOGMPEXPORT(msg)
 
     -- Export from bank if it's open and selected
     if BankFrame and BankFrame:IsVisible() then
-        print("|cffff0000Debug:|r Začínám export z banky...")
+        if MirrorMyst.db.profile.debugMode then
+            print("|cffff0000Debug:|r Starting export from bank...")
+        end
         -- Main bank (BANK_CONTAINER = -1)
         if settings.bankMain then
             local bankSlots = C_Container.GetContainerNumSlots(-1)
-            print(string.format("|cffff0000Debug:|r Prohledávám hlavní banku (%d slotů)", bankSlots))
+            if MirrorMyst.db.profile.debugMode then
+                print(string.format("|cffff0000Debug:|r Scanning main bank (%d slots)", bankSlots))
+            end
             for j = 1, bankSlots do
                 local itemInfo = C_Container.GetContainerItemInfo(-1, j)
                 if itemInfo then
@@ -236,7 +259,9 @@ function SlashCmdList.TMOGMPEXPORT(msg)
                         local tsmPrice = GetTSMPrice(itemID)
                         if tsmPrice then
                             local jsonEntry = string.format('{"item_id":"%s","item_price":"%d"}', itemID, tsmPrice)
-                            print(string.format("|cffff0000Debug:|r Export JSON: %s", jsonEntry))
+                            if MirrorMyst.db.profile.debugMode then
+                                print(string.format("|cffff0000Debug:|r Export JSON: %s", jsonEntry))
+                            end
                             tinsert(list, jsonEntry)
                         else
                             local jsonEntry = string.format('{"item_id":"%s"}', itemID)
@@ -254,7 +279,9 @@ function SlashCmdList.TMOGMPEXPORT(msg)
             if settings.bankBags[i] then
                 local bagID = i + 4  -- Convert 1-7 to 5-11
                 local slot_in_bag = C_Container.GetContainerNumSlots(bagID)
-                print(string.format("|cffff0000Debug:|r Prohledávám bank bag %d (%d slotů)", i, slot_in_bag))
+                if MirrorMyst.db.profile.debugMode then
+                    print(string.format("|cffff0000Debug:|r Scanning bank bag %d (%d slots)", i, slot_in_bag))
+                end
                 for j = 1, slot_in_bag do
                     local itemInfo = C_Container.GetContainerItemInfo(bagID, j)
                     if itemInfo then
@@ -263,7 +290,9 @@ function SlashCmdList.TMOGMPEXPORT(msg)
                             local tsmPrice = GetTSMPrice(itemID)
                             if tsmPrice then
                                 local jsonEntry = string.format('{"item_id":"%s","item_price":"%d"}', itemID, tsmPrice)
+                                if MirrorMyst.db.profile.debugMode then
                                 print(string.format("|cffff0000Debug:|r Export JSON: %s", jsonEntry))
+                            end
                                 tinsert(list, jsonEntry)
                             else
                                 local jsonEntry = string.format('{"item_id":"%s"}', itemID)
@@ -278,7 +307,9 @@ function SlashCmdList.TMOGMPEXPORT(msg)
         end
     end
  
-    print(string.format("|cffff0000Debug:|r Export dokončen, nalezeno %d předmětů", totalItems))
+    if MirrorMyst.db.profile.debugMode then
+        print(string.format("|cffff0000Debug:|r Export completed, found %d items", totalItems))
+    end
     local jsonData = "[\n" .. table.concat(list, ",\n") .. "\n]"
     editBox:SetText(encode(jsonData))
     frame:Show()

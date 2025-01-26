@@ -1,9 +1,10 @@
-local addonName = "MirrorMyst"
+    local addonName = "MirrorMyst"
 local MirrorMyst = LibStub("AceAddon-3.0"):NewAddon(addonName, "AceConsole-3.0")
 
 -- Výchozí hodnoty
 local defaults = {
     profile = {
+        debugMode = false,
         bags = {
             [0] = true, -- Backpack
             [1] = true,
@@ -37,82 +38,97 @@ function MirrorMyst:OnInitialize()
         type = "group",
         name = "MirrorMyst MarketPlace",
         args = {
-            bags = {
-                type = "multiselect",
-                order = 1,
-                name = "Bags",
-                desc = "Select which bags to include in export",
-                values = {
-                    [0] = "Backpack",
-                    [1] = "Bag 1",
-                    [2] = "Bag 2",
-                    [3] = "Bag 3",
-                    [4] = "Bag 4"
-                },
-                get = function(info, key) return self.db.profile.bags[key] end,
-                set = function(info, key, value) self.db.profile.bags[key] = value end
+            debugMode = {
+                type = "toggle",
+                order = 0,
+                name = "Debug Mode",
+                desc = "Enable debug messages in chat",
+                get = function(info) return self.db.profile.debugMode end,
+                set = function(info, value) self.db.profile.debugMode = value end
             },
-            bank = {
+            storage = {
                 type = "group",
-                order = 2,
-                name = "Bank",
+                order = 1,
+                name = "Storage",
                 args = {
-                    main = {
-                        type = "toggle",
+                    inventory = {
+                        type = "group",
                         order = 1,
-                        name = "Main Bank",
-                        desc = "Include main bank slots in export",
-                        get = function(info) return self.db.profile.bankMain end,
-                        set = function(info, value) self.db.profile.bankMain = value end
+                        name = "Inventory",
+                        args = {
+                            bags = {
+                                type = "multiselect",
+                                order = 1,
+                                name = "Bags",
+                                desc = "Select which bags to include in export",
+                                values = {
+                                    [0] = "Backpack",
+                                    [1] = "Bag 1",
+                                    [2] = "Bag 2",
+                                    [3] = "Bag 3",
+                                    [4] = "Bag 4"
+                                },
+                                get = function(info, key) return self.db.profile.bags[key] end,
+                                set = function(info, key, value) self.db.profile.bags[key] = value end
+                            }
+                        }
                     },
-                    bags = {
-                        type = "multiselect",
+                    bankSlots = {
+                        type = "group",
                         order = 2,
-                        name = "Bank Bags",
-                        desc = "Select which bank bags to include in export",
-                        values = {
-                            [1] = "Bank Bag 1",
-                            [2] = "Bank Bag 2",
-                            [3] = "Bank Bag 3",
-                            [4] = "Bank Bag 4",
-                            [5] = "Bank Bag 5",
-                            [6] = "Bank Bag 6",
-                            [7] = "Bank Bag 7"
-                        },
-                        get = function(info, key) return self.db.profile.bankBags[key] end,
-                        set = function(info, key, value) self.db.profile.bankBags[key] = value end
+                        name = "Bank Slots",
+                        args = {
+                            main = {
+                                type = "toggle",
+                                order = 1,
+                                name = "Main Bank",
+                                desc = "Include main bank slots in export",
+                                get = function(info) return self.db.profile.bankMain end,
+                                set = function(info, value) self.db.profile.bankMain = value end
+                            },
+                            bags = {
+                                type = "multiselect",
+                                order = 2,
+                                name = "Bank Bags",
+                                desc = "Select which bank bags to include in export",
+                                values = {
+                                    [1] = "Bank Bag 1",
+                                    [2] = "Bank Bag 2",
+                                    [3] = "Bank Bag 3",
+                                    [4] = "Bank Bag 4",
+                                    [5] = "Bank Bag 5",
+                                    [6] = "Bank Bag 6",
+                                    [7] = "Bank Bag 7"
+                                },
+                                get = function(info, key) return self.db.profile.bankBags[key] end,
+                                set = function(info, key, value) self.db.profile.bankBags[key] = value end
+                            }
+                        }
                     }
                 }
-            }
-        },
-        tsm = {
-            type = "group",
-            order = 3,
-            name = "TradeSkillMaster",
-            args = {
-                enabled = {
-                    type = "toggle",
-                    order = 1,
-                    name = "Enable TSM Prices",
-                    desc = "Include TSM prices in export",
-                    get = function(info) return self.db.profile.tsmPrices.enabled end,
-                    set = function(info, value) self.db.profile.tsmPrices.enabled = value end
+            },
+            tsmEnabled = {
+                type = "toggle",
+                order = 2,
+                name = "Enable TSM Prices",
+                desc = "Include TSM prices in export",
+                get = function(info) return self.db.profile.tsmPrices.enabled end,
+                set = function(info, value) self.db.profile.tsmPrices.enabled = value end
+            },
+            tsmSource = {
+                type = "select",
+                order = 3,
+                name = "TSM Price Source",
+                desc = "Select which TSM price source to use",
+                values = {
+                    ["DBMarket"] = "Market Value",
+                    ["DBMinBuyout"] = "Minimum Buyout",
+                    ["DBRegionMarketAvg"] = "Region Market Average",
+                    ["DBRegionSaleAvg"] = "Region Sale Average"
                 },
-                source = {
-                    type = "select",
-                    order = 2,
-                    name = "Price Source",
-                    desc = "Select which TSM price source to use",
-                    values = {
-                        ["DBMarket"] = "Market Value",
-                        ["DBMinBuyout"] = "Minimum Buyout",
-                        ["DBRegionMarketAvg"] = "Region Market Average",
-                        ["DBRegionSaleAvg"] = "Region Sale Average"
-                    },
-                    get = function(info) return self.db.profile.tsmPrices.source end,
-                    set = function(info, value) self.db.profile.tsmPrices.source = value end,
-                    disabled = function() return not self.db.profile.tsmPrices.enabled end
-                }
+                get = function(info) return self.db.profile.tsmPrices.source end,
+                set = function(info, value) self.db.profile.tsmPrices.source = value end,
+                disabled = function() return not self.db.profile.tsmPrices.enabled end
             }
         }
     }

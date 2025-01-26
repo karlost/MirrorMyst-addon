@@ -111,27 +111,36 @@ end
 -- Získání TSM ceny pro předmět
 local function GetTSMPrice(itemID)
     if not IsTSMAvailable() then 
-        print("|cffff0000Debug:|r TSM API není dostupné")
+        local MirrorMyst = LibStub("AceAddon-3.0"):GetAddon("MirrorMystExporter")
+        if MirrorMyst.db.profile.debugMode then
+            print("|cffff0000Debug:|r TSM API is not available")
+        end
         return nil 
     end
     
     local MirrorMyst = LibStub("AceAddon-3.0"):GetAddon("MirrorMystExporter")
     if not MirrorMyst.db.profile.tsmPrices.enabled then 
-        print("|cffff0000Debug:|r TSM ceny jsou vypnuté v nastavení")
+        if MirrorMyst.db.profile.debugMode then
+            print("|cffff0000Debug:|r TSM prices are disabled in settings")
+        end
         return nil 
     end
 
     -- Získání item linku pro konverzi na TSM itemString
     local itemLink = select(2, GetItemInfo(itemID))
     if not itemLink then
-        print(string.format("|cffff0000Debug:|r Nelze získat item link pro ID %d", itemID))
+        if MirrorMyst.db.profile.debugMode then
+            print(string.format("|cffff0000Debug:|r Cannot get item link for ID %d", itemID))
+        end
         return nil
     end
 
     -- Konverze na TSM itemString
     local itemString = TSM_API.ToItemString(itemLink)
     if not itemString then
-        print(string.format("|cffff0000Debug:|r Nelze konvertovat item link na TSM itemString pro ID %d", itemID))
+        if MirrorMyst.db.profile.debugMode then
+            print(string.format("|cffff0000Debug:|r Cannot convert item link to TSM itemString for ID %d", itemID))
+        end
         return nil
     end
     
@@ -139,9 +148,13 @@ local function GetTSMPrice(itemID)
     local price, errorMsg = TSM_API.GetCustomPriceValue(priceSource, itemString)
     
     if price then
-        print(string.format("|cffff0000Debug:|r Získána TSM cena pro item %d: %d (%s)", itemID, price, priceSource))
+        if MirrorMyst.db.profile.debugMode then
+            print(string.format("|cffff0000Debug:|r Got TSM price for item %d: %d (%s)", itemID, price, priceSource))
+        end
     else
-        print(string.format("|cffff0000Debug:|r TSM cena není dostupná pro item %d (%s): %s", itemID, priceSource, errorMsg or "neznámá chyba"))
+        if MirrorMyst.db.profile.debugMode then
+            print(string.format("|cffff0000Debug:|r TSM price is not available for item %d (%s): %s", itemID, priceSource, errorMsg or "unknown error"))
+        end
     end
     
     return price
@@ -154,37 +167,69 @@ local function ExportAuctions()
         return
     end
 
-    -- Query owned auctions with default sort (by time remaining)
-    local sorts = {
-        {sortOrder = 0, reverseSort = false}
-    }
-    C_AuctionHouse.QueryOwnedAuctions(sorts)
-
     -- Create a list to store auction data
     local list = {}
 
     -- Wait for the OWNED_AUCTIONS_UPDATED event
     local function OnEvent(self, event)
         if event == "OWNED_AUCTIONS_UPDATED" then
+            local MirrorMyst = LibStub("AceAddon-3.0"):GetAddon("MirrorMystExporter")
+            if MirrorMyst.db.profile.debugMode then
+                print("|cffff0000Debug:|r Received OWNED_AUCTIONS_UPDATED event")
+            end
             local ownedAuctions = C_AuctionHouse.GetOwnedAuctions()
             
+            if not ownedAuctions then
+                if MirrorMyst.db.profile.debugMode then
+                    print("|cffff0000Debug:|r GetOwnedAuctions returned nil")
+                end
+                return
+            end
+            
+            if MirrorMyst.db.profile.debugMode then
+                print(string.format("|cffff0000Debug:|r Found %d auctions", #ownedAuctions))
+            end
+            
             for _, auction in ipairs(ownedAuctions) do
-                local status = auction.status -- 1 = active, 2 = sold
-                if status == 1 then
+                local status = auction.status -- 0 = active, 2 = sold
+                if MirrorMyst.db.profile.debugMode then
+                    print(string.format("|cffff0000Debug:|r Auction status: %d (0=active, 2=sold)", status))
+                end
+                
+                if status == 0 then
                     local itemID = auction.itemKey.itemID
+                    if MirrorMyst.db.profile.debugMode then
+                        print(string.format("|cffff0000Debug:|r Processing item ID: %d", itemID))
+                    end
+                    
                     if canExportItem(itemID) then
+                        if MirrorMyst.db.profile.debugMode then
+                            print(string.format("|cffff0000Debug:|r Item %d passed canExportItem check", itemID))
+                        end
                         local tsmPrice = GetTSMPrice(itemID)
                         if tsmPrice then
                             local jsonEntry = string.format('{"item_id":"%d","item_price":"%d"}', itemID, tsmPrice)
-                            print(string.format("|cffff0000Debug:|r Export JSON: %s", jsonEntry))
+                            if MirrorMyst.db.profile.debugMode then
+                                print(string.format("|cffff0000Debug:|r Export JSON: %s", jsonEntry))
+                            end
                             tinsert(list, jsonEntry)
                         else
                             local jsonEntry = string.format('{"item_id":"%d"}', itemID)
-                            print(string.format("|cffff0000Debug:|r Export JSON: %s", jsonEntry))
+                            if MirrorMyst.db.profile.debugMode then
+                                print(string.format("|cffff0000Debug:|r Export JSON: %s", jsonEntry))
+                            end
                             tinsert(list, jsonEntry)
+                        end
+                    else
+                        if MirrorMyst.db.profile.debugMode then
+                            print(string.format("|cffff0000Debug:|r Item %d failed canExportItem check", itemID))
                         end
                     end
                 end
+            end
+            
+            if MirrorMyst.db.profile.debugMode then
+                print(string.format("|cffff0000Debug:|r Exporting %d items", #list))
             end
             
             -- Join all entries into a JSON array and encode
@@ -199,16 +244,38 @@ local function ExportAuctions()
             
             -- Unregister the event after processing
             frame:UnregisterEvent("OWNED_AUCTIONS_UPDATED")
+            frame:SetScript("OnEvent", nil)
         end
     end
 
-    -- Register for the auction update event
-    frame:RegisterEvent("OWNED_AUCTIONS_UPDATED")
+    -- Set up event handling
     frame:SetScript("OnEvent", OnEvent)
+    frame:RegisterEvent("OWNED_AUCTIONS_UPDATED")
+    
+    -- Query owned auctions with default sort (by time remaining)
+    local MirrorMyst = LibStub("AceAddon-3.0"):GetAddon("MirrorMystExporter")
+    if MirrorMyst.db.profile.debugMode then
+        print("|cffff0000Debug:|r Querying owned auctions...")
+    end
+    local sorts = {
+        {sortOrder = 0, reverseSort = false}
+    }
+    C_AuctionHouse.QueryOwnedAuctions(sorts)
+
+    -- Add timeout for event
+    C_Timer.After(5, function()
+        if frame:IsEventRegistered("OWNED_AUCTIONS_UPDATED") then
+            if MirrorMyst.db.profile.debugMode then
+                print("|cffff0000Debug:|r Timeout waiting for OWNED_AUCTIONS_UPDATED event")
+            end
+            frame:UnregisterEvent("OWNED_AUCTIONS_UPDATED")
+            frame:SetScript("OnEvent", nil)
+        end
+    end)
 end
 
 -- Register slash command
-SLASH_AUCTIONEXPORT1 = "/auctionexport"
+SLASH_AUCTIONEXPORT1 = "/mmaexport"
 SlashCmdList["AUCTIONEXPORT"] = function(msg)
     if AuctionHouseFrame and AuctionHouseFrame:IsVisible() then
         ExportAuctions()
@@ -221,7 +288,7 @@ end
 local loginFrame = CreateFrame("Frame")
 loginFrame:RegisterEvent("PLAYER_LOGIN")
 loginFrame:SetScript("OnEvent", function(self, event, ...)
-    print("|cffff0000TMog-MarketPlace:|r Type |cffffff00/auctionexport|r to export your active auctions.")
+    print("|cffff0000TMog-MarketPlace:|r Type |cffffff00/mmaexport|r to export your active auctions.")
     if IsTSMAvailable() then
         print("|cffff0000TMog-MarketPlace:|r TSM integration is available. You can enable TSM prices in the addon settings (/mm).")
     end
