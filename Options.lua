@@ -11,6 +11,10 @@ local defaults = {
             [3] = true,
             [4] = true
         },
+        tsmPrices = {
+            enabled = false,
+            source = "DBMarket"
+        },
         bankBags = {
             [1] = true,
             [2] = true,
@@ -78,6 +82,36 @@ function MirrorMyst:OnInitialize()
                         get = function(info, key) return self.db.profile.bankBags[key] end,
                         set = function(info, key, value) self.db.profile.bankBags[key] = value end
                     }
+                }
+            }
+        },
+        tsm = {
+            type = "group",
+            order = 3,
+            name = "TradeSkillMaster",
+            args = {
+                enabled = {
+                    type = "toggle",
+                    order = 1,
+                    name = "Enable TSM Prices",
+                    desc = "Include TSM prices in export",
+                    get = function(info) return self.db.profile.tsmPrices.enabled end,
+                    set = function(info, value) self.db.profile.tsmPrices.enabled = value end
+                },
+                source = {
+                    type = "select",
+                    order = 2,
+                    name = "Price Source",
+                    desc = "Select which TSM price source to use",
+                    values = {
+                        ["DBMarket"] = "Market Value",
+                        ["DBMinBuyout"] = "Minimum Buyout",
+                        ["DBRegionMarketAvg"] = "Region Market Average",
+                        ["DBRegionSaleAvg"] = "Region Sale Average"
+                    },
+                    get = function(info) return self.db.profile.tsmPrices.source end,
+                    set = function(info, value) self.db.profile.tsmPrices.source = value end,
+                    disabled = function() return not self.db.profile.tsmPrices.enabled end
                 }
             }
         }

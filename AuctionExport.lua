@@ -103,6 +103,50 @@ editBox:SetAllPoints(true)
 editBox:SetWidth(frame.scrollFrame:GetWidth())
 editBox:SetScript("OnEscapePressed", editBox.ClearFocus)
 
+-- Kontrola dostupnosti TSM
+local function IsTSMAvailable()
+    return _G.TSM_API ~= nil
+end
+
+-- Získání TSM ceny pro předmět
+local function GetTSMPrice(itemID)
+    if not IsTSMAvailable() then 
+        print("|cffff0000Debug:|r TSM API není dostupné")
+        return nil 
+    end
+    
+    local MirrorMyst = LibStub("AceAddon-3.0"):GetAddon("MirrorMystExporter")
+    if not MirrorMyst.db.profile.tsmPrices.enabled then 
+        print("|cffff0000Debug:|r TSM ceny jsou vypnuté v nastavení")
+        return nil 
+    end
+
+    -- Získání item linku pro konverzi na TSM itemString
+    local itemLink = select(2, GetItemInfo(itemID))
+    if not itemLink then
+        print(string.format("|cffff0000Debug:|r Nelze získat item link pro ID %d", itemID))
+        return nil
+    end
+
+    -- Konverze na TSM itemString
+    local itemString = TSM_API.ToItemString(itemLink)
+    if not itemString then
+        print(string.format("|cffff0000Debug:|r Nelze konvertovat item link na TSM itemString pro ID %d", itemID))
+        return nil
+    end
+    
+    local priceSource = MirrorMyst.db.profile.tsmPrices.source
+    local price, errorMsg = TSM_API.GetCustomPriceValue(priceSource, itemString)
+    
+    if price then
+        print(string.format("|cffff0000Debug:|r Získána TSM cena pro item %d: %d (%s)", itemID, price, priceSource))
+    else
+        print(string.format("|cffff0000Debug:|r TSM cena není dostupná pro item %d (%s): %s", itemID, priceSource, errorMsg or "neznámá chyba"))
+    end
+    
+    return price
+end
+
 -- Function to export auctions
 local function ExportAuctions()
     if not C_AuctionHouse then
@@ -126,10 +170,19 @@ local function ExportAuctions()
             
             for _, auction in ipairs(ownedAuctions) do
                 local status = auction.status -- 1 = active, 2 = sold
-                if status ~= 1 then
+                if status == 1 then
                     local itemID = auction.itemKey.itemID
                     if canExportItem(itemID) then
-                        tinsert(list, string.format('{"item_id":"%d"}', itemID))
+                        local tsmPrice = GetTSMPrice(itemID)
+                        if tsmPrice then
+                            local jsonEntry = string.format('{"item_id":"%d","item_price":"%d"}', itemID, tsmPrice)
+                            print(string.format("|cffff0000Debug:|r Export JSON: %s", jsonEntry))
+                            tinsert(list, jsonEntry)
+                        else
+                            local jsonEntry = string.format('{"item_id":"%d"}', itemID)
+                            print(string.format("|cffff0000Debug:|r Export JSON: %s", jsonEntry))
+                            tinsert(list, jsonEntry)
+                        end
                     end
                 end
             end
@@ -169,4 +222,7 @@ local loginFrame = CreateFrame("Frame")
 loginFrame:RegisterEvent("PLAYER_LOGIN")
 loginFrame:SetScript("OnEvent", function(self, event, ...)
     print("|cffff0000TMog-MarketPlace:|r Type |cffffff00/auctionexport|r to export your active auctions.")
+    if IsTSMAvailable() then
+        print("|cffff0000TMog-MarketPlace:|r TSM integration is available. You can enable TSM prices in the addon settings (/mm).")
+    end
 end)
