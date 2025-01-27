@@ -98,16 +98,15 @@ end
 local b='ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/'
 
 -- Pomocná funkce pro kontrolu předmětu
-local function canExportItem(itemID)
+local function canExportItem(itemID, bagID, slotID)
     -- Kontrola transmogrifikace
     if not C_Transmog.CanTransmogItem(itemID) then
         return false
     end
     
-    -- Kontrola vazby předmětu
-    local _, _, _, _, _, _, _, _, _, _, _, _, _, bindType = GetItemInfo(itemID)
-    -- bindType: 0 = není vázaný, 1 = váže při sebrání, 2 = váže při nasazení, 3 = váže na účet
-    if bindType == 1 then -- pouze předměty co nejsou BoP
+    -- Kontrola zda je item aktuálně vázaný (soulbound)
+    local itemLocation = ItemLocation:CreateFromBagAndSlot(bagID, slotID)
+    if itemLocation and itemLocation:IsValid() and C_Item.IsBound(itemLocation) then
         return false
     end
     
@@ -220,7 +219,7 @@ function SlashCmdList.TMOGMPEXPORT(msg)
                 local itemInfo = C_Container.GetContainerItemInfo(i, j)
                 if itemInfo then
                     local itemID = itemInfo.itemID
-                    if canExportItem(itemID) then
+                    if canExportItem(itemID, i, j) then
                         local tsmPrice = GetTSMPrice(itemID)
                         if tsmPrice then
                             local jsonEntry = string.format('{"item_id":"%s","item_price":"%d"}', itemID, tsmPrice)
@@ -255,7 +254,7 @@ function SlashCmdList.TMOGMPEXPORT(msg)
                 local itemInfo = C_Container.GetContainerItemInfo(-1, j)
                 if itemInfo then
                     local itemID = itemInfo.itemID
-                    if canExportItem(itemID) then
+                    if canExportItem(itemID, -1, j) then
                         local tsmPrice = GetTSMPrice(itemID)
                         if tsmPrice then
                             local jsonEntry = string.format('{"item_id":"%s","item_price":"%d"}', itemID, tsmPrice)
@@ -286,7 +285,7 @@ function SlashCmdList.TMOGMPEXPORT(msg)
                     local itemInfo = C_Container.GetContainerItemInfo(bagID, j)
                     if itemInfo then
                         local itemID = itemInfo.itemID
-                        if canExportItem(itemID) then
+                        if canExportItem(itemID, bagID, j) then
                             local tsmPrice = GetTSMPrice(itemID)
                             if tsmPrice then
                                 local jsonEntry = string.format('{"item_id":"%s","item_price":"%d"}', itemID, tsmPrice)
